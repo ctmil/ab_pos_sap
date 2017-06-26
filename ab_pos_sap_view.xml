@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+	
+        <record id="ab_pos_sap_view_pos_session_form" model="ir.ui.view">
+            <field name="name">ab.pos.sap.view.pos.session.form</field>
+            <field name="model">pos.session</field>
+	    <field name="inherit_id" ref="point_of_sale.view_pos_session_form" />
+            <field name="arch" type="xml">
+		<button name="close" position="after">
+			<button name="generate_files" type="object" string="Crear archivos"></button>
+		</button>
+            </field>
+        </record>
+
+        <record id="ab_pos_sap_view_pos_config_form" model="ir.ui.view">
+            <field name="name">ab.pos.sap.view.pos.config.form</field>
+            <field name="model">pos.config</field>
+	    <field name="inherit_id" ref="point_of_sale.view_pos_config_form" />
+            <field name="arch" type="xml">
+		<field name="receipt_footer" position="after">
+			<group string="Contabilidad">
+				<field name="account_receivable" />
+				<field name="account_sales" />
+				<field name="account_vat" />
+			</group>
+		</field>
+            </field>
+        </record>
+
+        <record id="ab_pos_sap_view_account_form" model="ir.ui.view">
+            <field name="name">ab.pos.sap.view.account.form</field>
+            <field name="model">account.account</field>
+	    <field name="inherit_id" ref="account.view_account_form" />
+            <field name="arch" type="xml">
+		<field name="note" position="after">
+			<group>
+				<field 	name="sap_account" />
+			</group>
+		</field>
+            </field>
+        </record>
+
+        <record id="ab_pos_sap_view_location_form" model="ir.ui.view">
+            <field name="name">ab.pos.sap.view.location.form</field>
+            <field name="model">stock.location</field>
+	    <field name="inherit_id" ref="stock.view_location_form" />
+            <field name="arch" type="xml">
+		<field name="comment" position="after">
+			<group>
+				<field 	name="sap_center" />
+				<field 	name="sap_warehouse" />
+			</group>
+		</field>
+            </field>
+        </record>
+
+    </data>
+</openerp>
