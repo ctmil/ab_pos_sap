@@ -96,7 +96,8 @@ class pos_session(models.Model):
 		fechahora = fechahora.replace(':','')
 		fechahora = fechahora.replace('-','')
                 fecha = session.start_at[:10]
-                ofile  = open(output_directory.value + '/' + filename + fechahora + '.txt', "wb")
+		filename_fechahora = fechahora[6:8] + fechahora[4:6] + fechahora[0:4] + fechahora[8:12]
+                ofile  = open(output_directory.value + '/' + filename + filename_fechahora + '.txt', "wb")
                 writer = csv.writer(ofile, delimiter='|', quoting=csv.QUOTE_NONE)
 		sistema_origen = 'ODOO'
 		source_id = None
@@ -120,13 +121,66 @@ class pos_session(models.Model):
 				acct_receivable = session.config_id.account_receivable.sap_account
 				acct_vat = session.config_id.account_vat.sap_account
 				acct_sales = session.config_id.account_sales.sap_account
+				
+				net_amount_21 = 0
+				net_amount_105 = 0
+				tax_amount_21 = 0
+				tax_amount_105 = 0
+				no_gravados = 0
+				#import pdb;pdb.set_trace()
+				for line in order.lines:
+					if line.product_id.tax_rate == 0.21:
+						net_amount_21 = net_amount_21 + line.price_subtotal
+						tax_amount_21 = tax_amount_21 + (line.price_subtotal_incl - line.price_subtotal)
+					if line.product_id.tax_rate == 0.105:
+						net_amount_105 = net_amount_105 + line.price_subtotal
+						tax_amount_105 = tax_amount_105 + (line.price_subtotal_incl - line.price_subtotal)
 
 				#partner_name = unicode(order.partner_id.name,errors='ignore')
 				partner_name = order.partner_id.name
-				
+				#row = [doc_date,order.id,'TFC',order.pos_reference,order.partner_id.document_number,partner_name,\
+				#	order.amount_total - order.amount_tax,'','',\
+				#	order.amount_tax,'','','',order.amount_total,pstng_date]
 				row = [doc_date,order.id,'TFC',order.pos_reference,order.partner_id.document_number,partner_name,\
-					order.amount_total - order.amount_tax,'','',\
-					order.amount_tax,'','','',order.amount_total,pstng_date]
+					net_amount_21,net_amount_105,no_gravados,\
+					tax_amount_21,tax_amount_105,'','',order.amount_total,pstng_date]
+				writer.writerow(row)
+		for refund in session.refund_ids:
+			if order.state in ['paid','open','done']:
+				refund = refund.refund_id
+				source_id = refund.id
+				ref = refund.internal_number
+				header_txt = refund.internal_number
+				doc_date = fecha[8:10] + fecha[5:7] + fecha[0:4]
+				pstng_date = fecha[8:10] + fecha[5:7] + fecha[0:4]
+
+				acct_receivable = session.config_id.account_receivable.sap_account
+				acct_vat = session.config_id.account_vat.sap_account
+				acct_sales = session.config_id.account_sales.sap_account
+				
+				net_amount_21 = 0
+				net_amount_105 = 0
+				tax_amount_21 = 0
+				tax_amount_105 = 0
+				no_gravados = 0
+				#import pdb;pdb.set_trace()
+				for line in refund.invoice_line:
+					net_amount = line.price_unit * line.quantity
+					if line.product_id.tax_rate == 0.21:
+						net_amount_21 = net_amount_21 + net_amount
+						tax_amount_21 = tax_amount_21 + (net_amount * line.product_id.tax_rate)
+					if line.product_id.tax_rate == 0.105:
+						net_amount_105 = net_amount_105 + net_amount
+						tax_amount_105 = tax_amount_105 + (net_amount * line.product_id.tax_rate)
+
+				#partner_name = unicode(order.partner_id.name,errors='ignore')
+				partner_name = order.partner_id.name
+				#row = [doc_date,order.id,'TFC',order.pos_reference,order.partner_id.document_number,partner_name,\
+				#	order.amount_total - order.amount_tax,'','',\
+				#	order.amount_tax,'','','',order.amount_total,pstng_date]
+				row = [doc_date,refund.id,'TNC',refund.internal_number,refund.partner_id.document_number,partner_name,\
+					net_amount_21,net_amount_105,no_gravados,\
+					tax_amount_21,tax_amount_105,'','',refund.amount_total,pstng_date]
 				writer.writerow(row)
                 ofile.close()
 
@@ -137,8 +191,9 @@ class pos_session(models.Model):
 		fechahora = fechahora.replace(' ','')
 		fechahora = fechahora.replace(':','')
 		fechahora = fechahora.replace('-','')
+		filename_fechahora = fechahora[6:8] + fechahora[4:6] + fechahora[0:4] + fechahora[8:12]
                 fecha = session.start_at[:10]
-                ofile  = open(output_directory.value + '/' + filename + fechahora + '.txt', "wb")
+                ofile  = open(output_directory.value + '/' + filename + filename_fechahora + '.txt', "wb")
                 writer = csv.writer(ofile, delimiter='|', quoting=csv.QUOTE_NONE)
 		sistema_origen = 'ODOO'
 		source_id = None
@@ -156,14 +211,16 @@ class pos_session(models.Model):
 				source_id = order.id
 				ref = order.pos_reference
 				header_txt = order.pos_reference
-				doc_date = fecha[8:10] + fecha[5:7] + fecha[0:4]
+				doc_date = fecha[5:7] + '/' + fecha[8:10] + '/' + fecha[0:4]
 				pstng_date = fecha[8:10] + fecha[5:7] + fecha[0:4]
 
 				for line in order.lines:
-							
-					row = [doc_date,line.product_id.default_code,order.session_id.config_id.stock_location_id.sap_center,\
-						order.session_id.config_id.stock_location_id.sap_warehouse,line.qty,line.product_id.product_tmpl_id.uom_id.name]
-					writer.writerow(row)
+					if line.product_id.type != 'service':	
+						row = [doc_date,line.product_id.default_code or line.product_id.name,\
+							order.session_id.config_id.stock_location_id.sap_center or order.session_id.config_id.stock_location_id.name,\
+							order.session_id.config_id.stock_location_id.sap_warehouse or order.session_id.config_id.stock_location_id.name,\
+							line.qty,line.product_id.product_tmpl_id.uom_id.name]
+						writer.writerow(row)
                 ofile.close()
 		
 
