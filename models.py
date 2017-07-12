@@ -11,6 +11,8 @@ import datetime
 from openerp.fields import Date as newdate
 from datetime import datetime,date
 import csv
+# from unidecode import unidecode
+
 
 class pos_session(models.Model):
         _inherit = 'pos.session'
@@ -79,12 +81,16 @@ class pos_session(models.Model):
 					row_payments.append(row_payment_line1)
 					row_payments.append(row_payment_line2)
 			row = [1,sistema_origen,source_id,id_proceso,ref,header_txt,doc_date,pstng_date]
-			writer.writerow(row)
-			writer.writerow(row_line1)
-			writer.writerow(row_line2)
-			writer.writerow(row_line3)
-			for row_payment in  row_payments:
-				writer.writerow(row_payment)
+			#writer.writerow(unidecode(row))
+			try:
+				writer.writerow(row)
+				writer.writerow(row_line1)
+				writer.writerow(row_line2)
+				writer.writerow(row_line3)
+				for row_payment in  row_payments:
+					writer.writerow(row_payment)
+			except:
+				import pdb;pdb.set_trace()
 			row_payments = []	
                 ofile.close()
 
@@ -141,10 +147,19 @@ class pos_session(models.Model):
 				#row = [doc_date,order.id,'TFC',order.pos_reference,order.partner_id.document_number,partner_name,\
 				#	order.amount_total - order.amount_tax,'','',\
 				#	order.amount_tax,'','','',order.amount_total,pstng_date]
-				row = [doc_date,order.id,'TFC',order.pos_reference,order.partner_id.document_number,partner_name,\
-					net_amount_21,net_amount_105,no_gravados,\
-					tax_amount_21,tax_amount_105,'','',order.amount_total,pstng_date]
-				writer.writerow(row)
+				if order.amount_total > 0:
+					row = [doc_date,order.id,'TFC',order.pos_reference,order.partner_id.document_number,partner_name,\
+						net_amount_21,net_amount_105,no_gravados,\
+						tax_amount_21,tax_amount_105,'','',order.amount_total,pstng_date]
+				else:
+					if order.amount_total < 0:
+						row = [doc_date,order.id,'TNC',order.pos_reference,order.partner_id.document_number,partner_name,\
+							net_amount_21 * (-1),net_amount_105 * (-1),no_gravados,\
+							tax_amount_21 * (-1),tax_amount_105 * (-1),'','',order.amount_total * (-1),pstng_date]
+				try:
+					writer.writerow(row)
+				except:
+					import pdb;pdb.set_trace()
 		for refund in session.refund_ids:
 			if order.state in ['paid','open','done']:
 				refund = refund.refund_id
@@ -219,7 +234,7 @@ class pos_session(models.Model):
 						row = [doc_date,line.product_id.default_code or line.product_id.name,\
 							order.session_id.config_id.stock_location_id.sap_center or order.session_id.config_id.stock_location_id.name,\
 							order.session_id.config_id.stock_location_id.sap_warehouse or order.session_id.config_id.stock_location_id.name,\
-							line.qty,line.product_id.product_tmpl_id.uom_id.name]
+							line.qty,'EA']
 						writer.writerow(row)
                 ofile.close()
 		
