@@ -13,6 +13,10 @@ from datetime import datetime,date
 import csv
 # from unidecode import unidecode
 
+class product_category(models.Model):
+        _inherit = 'product.category'
+
+	sap_name = fields.Char('Categoria SAP')
 
 class pos_session(models.Model):
         _inherit = 'pos.session'
@@ -31,13 +35,17 @@ class pos_session(models.Model):
 		fechahora = fechahora.replace(':','')
 		fechahora = fechahora.replace('-','')
                 fecha = session.start_at[:10]
-                ofile  = open(output_directory.value + '/' + filename + fechahora + '.txt', "wb")
+		filename_fechahora = fechahora[6:8] + fechahora[4:6] + fechahora[0:4] + fechahora[8:12]
+		#import pdb;pdb.set_trace()
+                ofile  = open(output_directory.value + '/' + filename + filename_fechahora + '.txt', "wb")
                 writer = csv.writer(ofile, delimiter='|', quoting=csv.QUOTE_NONE)
 		# Cabecera 0
 		total_amount = 0
 		for order in session.order_ids:
 			if order.state in ['paid','invoiced','done']:
-				total_amount = total_amount + order.amount_total
+				total_amount = total_amount + abs(order.amount_total * 2) 
+				for payment in order.statement_ids:
+					total_amount = total_amount + abs(payment.amount * 2)
                 row = [0,session.name,len(session.order_ids),total_amount]
                 writer.writerow(row)
 		sistema_origen = 'ODOO'
@@ -64,20 +72,26 @@ class pos_session(models.Model):
 				doc_date = fecha[8:10] + fecha[5:7] + fecha[0:4]
 				pstng_date = fecha[8:10] + fecha[5:7] + fecha[0:4]
 
-				acct_receivable = session.config_id.account_receivable.sap_account
-				acct_vat = session.config_id.account_vat.sap_account
-				acct_sales = session.config_id.account_sales.sap_account
-				row_line1 = [2,acct_receivable,'ARS',order.amount_total,'','Deudores por Venta','','']
-				row_line2 = [2,acct_sales,'ARS',order.amount_total - order.amount_tax,'-','Ventas','','']
-				row_line3 = [2,acct_vat,'ARS',order.amount_tax,'-','IVA','','']
+				acct_receivable = session.config_id.account_receivable.code
+				acct_vat = session.config_id.account_vat.code
+				acct_sales = session.config_id.account_sales.code
+				if order.amount_total > 0:
+					row_line1 = [2,acct_receivable,'ARS',order.amount_total,'','Deudores por Venta','','']
+					row_line2 = [2,acct_sales,'ARS',order.amount_total - order.amount_tax,'-','Ventas','','']
+					row_line3 = [2,acct_vat,'ARS',order.amount_tax,'-','IVA','','']
+				else:
+					row_line1 = [2,acct_receivable,'ARS',order.amount_total * (-1),'','Deudores por Venta','-','']
+					row_line2 = [2,acct_sales,'ARS',(order.amount_total - order.amount_tax) * (-1),'','Ventas','','']
+					row_line3 = [2,acct_vat,'ARS',(order.amount_tax)*(-1),'','IVA','','']
+					
 				
 				for payment in order.statement_ids:
 					if payment.journal_id.is_credit_card:
 						tipo_proc = '21'
 					else:
 						tipo_proc = '20'
-					row_payment_line1 = ['2',acct_receivable,'ARS',payment.amount,'-','Ventas','','']
-					row_payment_line2 = ['2',payment.journal_id.default_credit_account_id.sap_account,'ARS',payment.amount,'',payment.journal_id.name,'','']
+					row_payment_line1 = ['2',acct_receivable,'ARS',abs(payment.amount),'-','Ventas','','']
+					row_payment_line2 = ['2',payment.journal_id.default_credit_account_id.sap_account,'ARS',abs(payment.amount),'',payment.journal_id.name,'','']
 					row_payments.append(row_payment_line1)
 					row_payments.append(row_payment_line2)
 			row = [1,sistema_origen,source_id,id_proceso,ref,header_txt,doc_date,pstng_date]
@@ -147,15 +161,19 @@ class pos_session(models.Model):
 				#row = [doc_date,order.id,'TFC',order.pos_reference,order.partner_id.document_number,partner_name,\
 				#	order.amount_total - order.amount_tax,'','',\
 				#	order.amount_tax,'','','',order.amount_total,pstng_date]
+				if order.partner_id.responsability_id.code == '1':
+					tipo_comp = 'A'
+				else:
+					tipo_comp = 'B'
 				if order.amount_total > 0:
-					row = [doc_date,order.id,'TFC',order.pos_reference,order.partner_id.document_number,partner_name,\
+					row = [doc_date,order.id,'TFC',tipo_comp,order.pos_reference,order.partner_id.document_number,partner_name,\
 						net_amount_21,net_amount_105,no_gravados,\
 						tax_amount_21,tax_amount_105,'','',order.amount_total,pstng_date]
 				else:
 					if order.amount_total < 0:
-						row = [doc_date,order.id,'TNC',order.pos_reference,order.partner_id.document_number,partner_name,\
+						row = [doc_date,order.id,'TNC',tipo_comp,order.pos_reference,order.partner_id.document_number,partner_name,\
 							net_amount_21 * (-1),net_amount_105 * (-1),no_gravados,\
-							tax_amount_21 * (-1),tax_amount_105 * (-1),'','',order.amount_total * (-1),pstng_date]
+							tax_amount_21 * (-1),tax_amount_105 * (-1),'','',float(order.amount_total) * (-1),pstng_date]
 				try:
 					writer.writerow(row)
 				except:
@@ -231,10 +249,16 @@ class pos_session(models.Model):
 
 				for line in order.lines:
 					if line.product_id.type != 'service':	
-						row = [doc_date,line.product_id.default_code or line.product_id.name,\
-							order.session_id.config_id.stock_location_id.sap_center or order.session_id.config_id.stock_location_id.name,\
-							order.session_id.config_id.stock_location_id.sap_warehouse or order.session_id.config_id.stock_location_id.name,\
-							line.qty,'EA']
+						if 'No Brother' in line.product_id.product_tmpl_id.categ_id.complete_name:
+							row = [doc_date,line.product_id.product_tmpl_id.categ_id.sap_name or line.product_id.product_tmpl_id.categ_id.complete_name,\
+								order.session_id.config_id.stock_location_id.sap_center or order.session_id.config_id.stock_location_id.name,\
+								order.session_id.config_id.stock_location_id.sap_warehouse or order.session_id.config_id.stock_location_id.name,\
+								line.qty,'EA']
+						else:
+							row = [doc_date,line.product_id.default_code or line.product_id.name,\
+								order.session_id.config_id.stock_location_id.sap_center or order.session_id.config_id.stock_location_id.name,\
+								order.session_id.config_id.stock_location_id.sap_warehouse or order.session_id.config_id.stock_location_id.name,\
+								line.qty,'EA']
 						writer.writerow(row)
                 ofile.close()
 		
