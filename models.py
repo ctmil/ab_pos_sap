@@ -80,7 +80,7 @@ class pos_session(models.Model):
 					row_line2 = [2,acct_sales,'ARS',order.amount_total - order.amount_tax,'-','Ventas','','']
 					row_line3 = [2,acct_vat,'ARS',order.amount_tax,'-','IVA','','']
 				else:
-					row_line1 = [2,acct_receivable,'ARS',order.amount_total * (-1),'','Deudores por Venta','-','']
+					row_line1 = [2,acct_receivable,'ARS',order.amount_total * (-1),'-','Deudores por Venta','','']
 					row_line2 = [2,acct_sales,'ARS',(order.amount_total - order.amount_tax) * (-1),'','Ventas','','']
 					row_line3 = [2,acct_vat,'ARS',(order.amount_tax)*(-1),'','IVA','','']
 					
