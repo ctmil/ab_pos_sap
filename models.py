@@ -21,16 +21,27 @@ class product_category(models.Model):
 class pos_session(models.Model):
         _inherit = 'pos.session'
 
-	@api.multi
-        def generate_files(self):
+	@api.one
+	def generate_file(self):
+		if self:
+			self.generate_files(self.id)
+
+	@api.model
+        def generate_files(self,session_id=None):
 		#self.ensure_one()
                 output_directory = self.env['ir.config_parameter'].search([('key','=','ab_pos_output_directory')])
                 if not output_directory:
                         raise osv.except_osv('Error','No esta parametrizado ab_pos_output_directory\nComuniquese con el administrador')
                 #session = self
-		for session in self:
+		if session_id:
+			sessions = self.search([('id','=',session_id)])
+		else:
+			sessions = self.search([])
+		for session in sessions:
 			# Asientos
         	        filename = 'ASIENTOSODOOSAP'
+			if not session:
+				continue
                 	#session = self
 			fechahora = session.start_at[:16]
 			fechahora = fechahora.replace(' ','')
@@ -68,6 +79,10 @@ class pos_session(models.Model):
 
 			for order in session.order_ids:
 				if order.state in ['paid','invoiced','done']:
+					if order.partner_id.responsability_id.code == '1':
+						id_proceso = '10'
+					else:
+						id_proceso = '11'
 					source_id = order.id
 					ref = order.pos_reference
 					header_txt = order.pos_reference
@@ -114,7 +129,6 @@ class pos_session(models.Model):
 
 			# Libro de IVA
         	        filename = 'DETALLETICKET'
-                	session = self
 			fechahora = session.start_at[:16]
 			fechahora = fechahora.replace(' ','')
 			fechahora = fechahora.replace(':','')
@@ -223,7 +237,6 @@ class pos_session(models.Model):
 	
 			# Libro de IVA
                 	filename = 'MOVIMIENTOSTOCKSAP'
-	                session = self
 			fechahora = session.start_at[:16]
 			fechahora = fechahora.replace(' ','')
 			fechahora = fechahora.replace(':','')
@@ -264,7 +277,7 @@ class pos_session(models.Model):
 									order.session_id.config_id.stock_location_id.sap_warehouse or order.session_id.config_id.stock_location_id.name,\
 									line.qty,'EA']
 							writer.writerow(row)
-                ofile.close()
+	                ofile.close()
 		
 
 

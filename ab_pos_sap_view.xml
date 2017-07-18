@@ -19,7 +19,7 @@
 	    <field name="inherit_id" ref="point_of_sale.view_pos_session_form" />
             <field name="arch" type="xml">
 		<button name="close" position="after">
-			<button name="generate_files" type="object" string="Crear archivos"></button>
+			<button name="generate_file" type="object" string="Crear archivos"></button>
 		</button>
             </field>
         </record>
