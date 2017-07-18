@@ -55,7 +55,7 @@ class pos_session(models.Model):
 			# Cabecera 0
 			total_amount = 0
 			for order in session.order_ids:
-				if order.state in ['paid','invoiced','done']:
+				if order.state in ['paid','invoiced','done'] and order.pos_reference:
 					total_amount = total_amount + abs(order.amount_total * 2) 
 					for payment in order.statement_ids:
 						total_amount = total_amount + abs(payment.amount * 2)
@@ -78,13 +78,16 @@ class pos_session(models.Model):
 			row_payments = []
 
 			for order in session.order_ids:
-				if order.state in ['paid','invoiced','done']:
+				if not order.pos_reference:
+					continue
+				if order.state in ['paid','invoiced','done'] and order.pos_reference:
+					id_proceso = '10'
 					if order.partner_id.responsability_id.code == '1':
-						id_proceso = '10'
+						tipo_factura = 'A'
 					else:
-						id_proceso = '11'
+						tipo_factura = 'B'
 					source_id = order.id
-					ref = order.pos_reference
+					ref = order.pos_reference.replace('-',tipo_factura)
 					header_txt = order.pos_reference
 					doc_date = fecha[8:10] + fecha[5:7] + fecha[0:4]
 					pstng_date = fecha[8:10] + fecha[5:7] + fecha[0:4]
