@@ -110,7 +110,7 @@ class pos_session(models.Model):
 							tipo_proc = '21'
 						else:
 							tipo_proc = '20'
-						row_payment_line1 = ['2',acct_receivable,'ARS',abs(payment.amount),'-','Ventas','','']
+						row_payment_line1 = ['2',acct_receivable,'ARS',abs(payment.amount),'-','Deudores por Venta','','']
 						row_payment_line2 = ['2',payment.journal_id.default_credit_account_id.sap_account,'ARS',abs(payment.amount),'',payment.journal_id.name,'','']
 						row_payments.append(row_payment_line1)
 						row_payments.append(row_payment_line2)
