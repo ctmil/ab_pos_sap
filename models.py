@@ -49,7 +49,6 @@ class pos_session(models.Model):
 			fechahora = fechahora.replace('-','')
         	        fecha = session.start_at[:10]
 			filename_fechahora = fechahora[6:8] + fechahora[4:6] + fechahora[0:4] + fechahora[8:12]
-			#import pdb;pdb.set_trace()
         	        ofile  = open(output_directory.value + '/' + filename + filename_fechahora + '.txt', "wb")
                 	writer = csv.writer(ofile, delimiter='|', quoting=csv.QUOTE_NONE)
 			# Cabecera 0
@@ -111,7 +110,8 @@ class pos_session(models.Model):
 						else:
 							tipo_proc = '20'
 						row_payment_line1 = ['2',acct_receivable,'ARS',abs(payment.amount),'-','Deudores por Venta','','']
-						row_payment_line2 = ['2',payment.journal_id.default_credit_account_id.sap_account,'ARS',abs(payment.amount),'',payment.journal_id.name,'','']
+						row_payment_line2 = ['2',payment.journal_id.default_credit_account_id.sap_account,'ARS',abs(payment.amount),'',\
+							unicode(payment.journal_id.name).encode('utf-8'),'','']
 						row_payments.append(row_payment_line1)
 						row_payments.append(row_payment_line2)
 				row = [1,sistema_origen,source_id,id_proceso,ref,header_txt,doc_date,pstng_date]
@@ -126,6 +126,7 @@ class pos_session(models.Model):
 					for row_payment in  row_payments:
 						writer.writerow(row_payment)
 				except:
+					print "Error"
 					import pdb;pdb.set_trace()
 				row_payments = []	
 	                ofile.close()
@@ -168,7 +169,6 @@ class pos_session(models.Model):
 					tax_amount_21 = 0
 					tax_amount_105 = 0
 					no_gravados = 0
-					#import pdb;pdb.set_trace()
 					for line in order.lines:
 						if line.product_id.tax_rate == 0.21:
 							net_amount_21 = net_amount_21 + line.price_subtotal
@@ -178,7 +178,7 @@ class pos_session(models.Model):
 							tax_amount_105 = tax_amount_105 + (line.price_subtotal_incl - line.price_subtotal)
 
 					#partner_name = unicode(order.partner_id.name,errors='ignore')
-					partner_name = order.partner_id.name
+					partner_name = unicode(order.partner_id.name).encode('utf-8')
 					#row = [doc_date,order.id,'TFC',order.pos_reference,order.partner_id.document_number,partner_name,\
 					#	order.amount_total - order.amount_tax,'','',\
 					#	order.amount_tax,'','','',order.amount_total,pstng_date]
@@ -198,6 +198,7 @@ class pos_session(models.Model):
 					try:
 						writer.writerow(row)
 					except:
+						print "Error"
 						import pdb;pdb.set_trace()
 			for refund in session.refund_ids:
 				if order.state in ['paid','open','done']:
@@ -217,7 +218,6 @@ class pos_session(models.Model):
 					tax_amount_21 = 0
 					tax_amount_105 = 0
 					no_gravados = 0
-					#import pdb;pdb.set_trace()
 					for line in refund.invoice_line:
 						net_amount = line.price_unit * line.quantity
 						if line.product_id.tax_rate == 0.21:
