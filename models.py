@@ -246,7 +246,8 @@ class pos_session(models.Model):
 			fechahora = fechahora.replace('-','')
 			filename_fechahora = fechahora[6:8] + fechahora[4:6] + fechahora[0:4] + fechahora[8:12]
         	        fecha = session.start_at[:10]
-                	ofile  = open(output_directory.value + '/' + filename + filename_fechahora + '.txt', "wb")
+                	#ofile  = open(output_directory.value + '/' + filename + filename_fechahora + '.txt', "wb")
+                	ofile  = open(output_directory.value + '/' + filename + fechahora + '.txt', "wb")
 	                writer = csv.writer(ofile, delimiter='|', quoting=csv.QUOTE_NONE)
 			sistema_origen = 'ODOO'
 			source_id = None
