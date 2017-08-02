@@ -54,12 +54,14 @@ class pos_session(models.Model):
                 	writer = csv.writer(ofile, delimiter='|', quoting=csv.QUOTE_NONE)
 			# Cabecera 0
 			total_amount = 0
+			cantidad = 0
 			for order in session.order_ids:
 				if order.state in ['paid','invoiced','done'] and order.pos_reference and '0013-' in order.pos_reference and order.amount_total > 0:
 					total_amount = total_amount + abs(order.amount_total * 2) 
+					cantidad = cantidad + 1
 					for payment in order.statement_ids:
 						total_amount = total_amount + abs(payment.amount * 2)
-                	row = [0,session.name,len(session.order_ids)*2,total_amount]
+                	row = [0,session.name,cantidad*2,total_amount]
 	                writer.writerow(row)
 			sistema_origen = 'ODOO'
 			source_id = None
