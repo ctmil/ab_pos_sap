@@ -55,7 +55,7 @@ class pos_session(models.Model):
 			# Cabecera 0
 			total_amount = 0
 			for order in session.order_ids:
-				if order.state in ['paid','invoiced','done'] and '0013-' in order.pos_reference and order.amount_total > 0:
+				if order.state in ['paid','invoiced','done'] and order.pos_reference and '0013-' in order.pos_reference and order.amount_total > 0:
 					total_amount = total_amount + abs(order.amount_total * 2) 
 					for payment in order.statement_ids:
 						total_amount = total_amount + abs(payment.amount * 2)
