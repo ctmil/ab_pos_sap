@@ -159,7 +159,8 @@ class pos_session(models.Model):
 		
 			for order in session.order_ids:
 				if order.state in ['paid','invoiced','done'] and order.pos_reference \
-					and '0013-' in order.pos_reference and order.pos_reference[:5] == '0013-':
+					and '0013-' in order.pos_reference and order.pos_reference[:5] == '0013-'\
+					and 'Cancelado' not in order.pos_reference:
 					source_id = order.id
 					ref = order.pos_reference
 					header_txt = order.pos_reference
