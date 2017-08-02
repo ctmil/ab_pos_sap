@@ -102,21 +102,22 @@ class pos_session(models.Model):
 						row_line2 = [2,acct_sales,'ARS',order.amount_total - order.amount_tax,'-','Ventas','','']
 						row_line3 = [2,acct_vat,'ARS',order.amount_tax,'-','IVA','','']
 					else:
-						row_line1 = [2,acct_receivable,'ARS',order.amount_total * (-1),'-','Deudores por Venta','','']
-						row_line2 = [2,acct_sales,'ARS',(order.amount_total - order.amount_tax) * (-1),'','Ventas','','']
-						row_line3 = [2,acct_vat,'ARS',(order.amount_tax)*(-1),'','IVA','','']
+						if order.amount_total < 0:
+							row_line1 = [2,acct_receivable,'ARS',order.amount_total * (-1),'-','Deudores por Venta','','']
+							row_line2 = [2,acct_sales,'ARS',(order.amount_total - order.amount_tax) * (-1),'','Ventas','','']
+							row_line3 = [2,acct_vat,'ARS',(order.amount_tax)*(-1),'','IVA','','']
 					
-				
-					for payment in order.statement_ids:
-						if payment.journal_id.is_credit_card:
-							tipo_proc = '21'
-						else:
-							tipo_proc = '20'
-						row_payment_line1 = ['2',acct_receivable,'ARS',abs(payment.amount),'-','Deudores por Venta','','']
-						row_payment_line2 = ['2',payment.journal_id.default_credit_account_id.sap_account,'ARS',abs(payment.amount),'',\
-							unicode(payment.journal_id.name).encode('utf-8'),'','']
-						row_payments.append(row_payment_line1)
-						row_payments.append(row_payment_line2)
+					if order.amount_total != 0:		
+						for payment in order.statement_ids:
+							if payment.journal_id.is_credit_card:
+								tipo_proc = '21'
+							else:
+								tipo_proc = '20'
+							row_payment_line1 = ['2',acct_receivable,'ARS',abs(payment.amount),'-','Deudores por Venta','','']
+							row_payment_line2 = ['2',payment.journal_id.default_credit_account_id.sap_account,'ARS',abs(payment.amount),'',\
+								unicode(payment.journal_id.name).encode('utf-8'),'','']
+							row_payments.append(row_payment_line1)
+							row_payments.append(row_payment_line2)
 				row = [1,sistema_origen,source_id,id_proceso,ref,header_txt,doc_date,pstng_date]
 				row_1 = [1,sistema_origen,source_id,tipo_proc,ref,header_txt,doc_date,pstng_date]
 				#writer.writerow(unidecode(row))
