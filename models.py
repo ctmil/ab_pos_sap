@@ -158,7 +158,8 @@ class pos_session(models.Model):
 			acct_sales = None
 		
 			for order in session.order_ids:
-				if order.state in ['paid','invoiced','done']:
+				if order.state in ['paid','invoiced','done'] and order.pos_reference \
+					and '0013-' in order.pos_reference and order.pos_reference[:5] == '0013-':
 					source_id = order.id
 					ref = order.pos_reference
 					header_txt = order.pos_reference
@@ -200,11 +201,14 @@ class pos_session(models.Model):
 							row = [doc_date,order.id,'TNC',tipo_comp,order.pos_reference,order.partner_id.document_number,partner_name,\
 								net_amount_21 * (-1),net_amount_105 * (-1),no_gravados,\
 								tax_amount_21 * (-1),tax_amount_105 * (-1),'','',float(order.amount_total) * (-1),pstng_date]
-					try:
-						writer.writerow(row)
-					except:
-						print "Error"
-						import pdb;pdb.set_trace()
+						else:
+							row = []
+					if row:
+						try:
+							writer.writerow(row)
+						except:
+							print "Error"
+							import pdb;pdb.set_trace()
 			for refund in session.refund_ids:
 				if order.state in ['paid','open','done']:
 					refund = refund.refund_id
@@ -217,6 +221,10 @@ class pos_session(models.Model):
 					acct_receivable = session.config_id.account_receivable.sap_account
 					acct_vat = session.config_id.account_vat.sap_account
 					acct_sales = session.config_id.account_sales.sap_account
+					if order.partner_id.responsability_id.code == '1':
+						tipo_comp = 'A'
+					else:
+						tipo_comp = 'B'
 					
 					net_amount_21 = 0
 					net_amount_105 = 0
@@ -237,7 +245,7 @@ class pos_session(models.Model):
 					#row = [doc_date,order.id,'TFC',order.pos_reference,order.partner_id.document_number,partner_name,\
 					#	order.amount_total - order.amount_tax,'','',\
 					#	order.amount_tax,'','','',order.amount_total,pstng_date]
-					row = [doc_date,refund.id,'TNC',refund.internal_number,refund.partner_id.document_number,partner_name,\
+					row = [doc_date,refund.id,'TNC',tipo_comp,refund.internal_number,refund.partner_id.document_number,partner_name,\
 						net_amount_21,net_amount_105,no_gravados,\
 						tax_amount_21,tax_amount_105,'','',refund.amount_total,pstng_date]
 					writer.writerow(row)
