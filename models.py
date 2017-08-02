@@ -80,7 +80,7 @@ class pos_session(models.Model):
 			row_payments = []
 
 			for order in session.order_ids:
-				if not order.pos_reference:
+				if not order.pos_reference or '0013' not in order.pos_reference or order.amount_total == 0:
 					continue
 				if order.state in ['paid','invoiced','done'] and order.pos_reference:
 					id_proceso = '10'
