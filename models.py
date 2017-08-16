@@ -306,7 +306,7 @@ class pos_config(models.Model):
 
 	account_receivable = fields.Many2one('account.account',string='Cuenta Deudores por Venta')
 	account_sales = fields.Many2one('account.account',string='Cuenta Ventas')
-	account_vat = fields.Many2one('account.account',string='Cuenta Ventas')
+	account_vat = fields.Many2one('account.account',string='Cuenta IVA')
 
 class account_account(models.Model):
 	_inherit = 'account.account'
