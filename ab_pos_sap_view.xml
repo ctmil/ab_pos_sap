@@ -2,6 +2,17 @@
 <openerp>
     <data>
 
+        <record id="ab_pos_sap_product_product_form_view" model="ir.ui.view">
+            <field name="name">ab.pos.sap.product.product.form</field>
+            <field name="model">product.product</field>
+	    <field name="inherit_id" ref="product.product_normal_form_view" />
+            <field name="arch" type="xml">
+		<field name="default_code" position="after">
+			<field name="sap_name" />
+		</field>
+            </field>
+        </record>
+
         <record id="ab_pos_sap_product_product_category_form_view" model="ir.ui.view">
             <field name="name">ab.pos.sap.product.category.form</field>
             <field name="model">product.category</field>

@@ -13,6 +13,11 @@ from datetime import datetime,date
 import csv
 # from unidecode import unidecode
 
+class product_product(models.Model):
+        _inherit = 'product.product'
+
+	sap_name = fields.Char('Material SAP')
+
 class product_category(models.Model):
         _inherit = 'product.category'
 
@@ -28,6 +33,16 @@ class pos_session(models.Model):
 
 	@api.model
         def generate_files(self,session_id=None):
+		# ids to skip
+		# Morresi
+		ids_to_skip = [955,956]
+		#Pancher
+		ids_to_skip.append(479)
+		ids_to_skip.append(476)
+		ids_to_skip.append(474)
+		ids_to_skip.append(431)
+		ids_to_skip.append(430)
+		#import pdb;pdb.set_trace()
 		#self.ensure_one()
                 output_directory = self.env['ir.config_parameter'].search([('key','=','ab_pos_output_directory')])
                 if not output_directory:
@@ -56,11 +71,20 @@ class pos_session(models.Model):
 			total_amount = 0
 			cantidad = 0
 			for order in session.order_ids:
-				if order.state in ['paid','invoiced','done'] and order.pos_reference and '0013-' in order.pos_reference and order.amount_total > 0:
+				if order.id in ids_to_skip:
+					continue
+				if order.state in ['paid','invoiced','done'] and order.pos_reference and '0013-' in order.pos_reference and order.amount_total > 0 \
+					and order.pos_reference[:5] == '0013-':
 					total_amount = total_amount + abs(order.amount_total * 2) 
 					cantidad = cantidad + 1
 					for payment in order.statement_ids:
 						total_amount = total_amount + abs(payment.amount * 2)
+			for refund in session.refund_ids:
+				if refund.refund_id.state in ['open'] and refund.refund_id.internal_number \
+					and '0013-' in refund.refund_id.internal_number and refund.refund_id.amount_total > 0:
+					total_amount = total_amount + abs(order.amount_total * 2) 
+					cantidad = cantidad + 1
+			
                 	row = [0,session.name,cantidad*2,total_amount]
 	                writer.writerow(row)
 			sistema_origen = 'ODOO'
@@ -78,9 +102,10 @@ class pos_session(models.Model):
 			row_line3 = []
 		
 			row_payments = []
-
 			for order in session.order_ids:
-				if not order.pos_reference or '0013' not in order.pos_reference or order.amount_total == 0:
+				if order.id in ids_to_skip:
+					continue
+				if not order.pos_reference or '0013' not in order.pos_reference or order.amount_total == 0 or order.pos_reference[:5] != '0013-':
 					continue
 				if order.state in ['paid','invoiced','done'] and order.pos_reference:
 					id_proceso = '10'
@@ -133,6 +158,53 @@ class pos_session(models.Model):
 					print "Error"
 					import pdb;pdb.set_trace()
 				row_payments = []	
+			for refund in session.refund_ids:
+				if refund.refund_id.state in ['open'] and refund.refund_id.internal_number:
+					id_proceso = '10'
+					if refund.refund_id.partner_id.responsability_id.code == '1':
+						tipo_factura = 'A'
+					else:
+						tipo_factura = 'B'
+					source_id = refund.refund_id.id
+					ref = refund.refund_id.internal_number.replace('-',tipo_factura)
+					header_txt = refund.refund_id.internal_number
+					doc_date = fecha[8:10] + fecha[5:7] + fecha[0:4]
+					pstng_date = fecha[8:10] + fecha[5:7] + fecha[0:4]
+	
+					acct_receivable = session.config_id.account_receivable.code
+					acct_vat = session.config_id.account_vat.code
+					acct_sales = session.config_id.account_sales.code
+					if refund.refund_id.amount_total > 0:
+						row_line1 = [2,acct_receivable,'ARS',refund.refund_id.amount_total,'-','Deudores por Venta','','']
+						row_line2 = [2,acct_sales,'ARS',refund.refund_id.amount_total - refund.refund_id.amount_tax,'','Ventas','','']
+						row_line3 = [2,acct_vat,'ARS',refund.refund_id.amount_tax,'','IVA','','']
+					
+					#if order.amount_total != 0:		
+					#	for payment in order.statement_ids:
+					#		if payment.journal_id.is_credit_card:
+					#			tipo_proc = '21'
+					#		else:
+					#			tipo_proc = '20'
+					#		row_payment_line1 = ['2',acct_receivable,'ARS',abs(payment.amount),'-','Deudores por Venta','','']
+					#		row_payment_line2 = ['2',payment.journal_id.default_credit_account_id.sap_account,'ARS',abs(payment.amount),'',\
+					#			unicode(payment.journal_id.name).encode('utf-8'),'','']
+					#		row_payments.append(row_payment_line1)
+					#		row_payments.append(row_payment_line2)
+				row = [1,sistema_origen,source_id,id_proceso,ref,header_txt,doc_date,pstng_date]
+				row_1 = [1,sistema_origen,source_id,tipo_proc,ref,header_txt,doc_date,pstng_date]
+				#writer.writerow(unidecode(row))
+				try:
+					writer.writerow(row)
+					writer.writerow(row_line1)
+					writer.writerow(row_line2)
+					writer.writerow(row_line3)
+					#writer.writerow(row_1)
+					#for row_payment in  row_payments:
+					#	writer.writerow(row_payment)
+				except:
+					print "Error"
+					import pdb;pdb.set_trace()
+				row_payments = []	
 	                ofile.close()
 
 			# Libro de IVA
@@ -158,6 +230,8 @@ class pos_session(models.Model):
 			acct_sales = None
 		
 			for order in session.order_ids:
+				if order.id in [ids_to_skip]:
+					continue
 				if order.state in ['paid','invoiced','done'] and order.pos_reference \
 					and '0013-' in order.pos_reference and order.pos_reference[:5] == '0013-'\
 					and 'Cancelado' not in order.pos_reference:
